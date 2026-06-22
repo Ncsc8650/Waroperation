@@ -239,12 +239,26 @@ function refreshAfterInput() {
   updateFileStatus();
 }
 
+function prepareForceBaselines(force) {
+  force.rows = force.rows.map((row) => ({
+    ...row,
+    baseMissileNumber: row.baseMissileNumber ?? Number(row.missileNumber ?? 0),
+  }));
+}
+
+function prepareAllBaselines() {
+  if (!state.data?.forces) return;
+  prepareForceBaselines(state.data.forces.red);
+  prepareForceBaselines(state.data.forces.blue);
+}
+
 function consumeMissilesForSalvo(force) {
   const factor = { minimum: 1, optimum: 2, maximum: 3 }[force.salvoMode] || 0;
   force.rows = force.rows.map((row) => ({
     ...row,
+    baseMissileNumber: row.baseMissileNumber ?? Number(row.missileNumber ?? 0),
     salvoSize: factor,
-    missileNumber: Number(row.missileNumber || 0) - factor,
+    missileNumber: (row.baseMissileNumber ?? Number(row.missileNumber ?? 0)) - factor,
   }));
 }
 
@@ -267,6 +281,7 @@ async function loadState({ silent = false } = {}) {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Cannot load workbook");
     state.data = data;
+    prepareAllBaselines();
     state.dirty = false;
     state.lastWorkbookModified = data.workbook.lastModified;
     renderAll();
@@ -278,6 +293,7 @@ async function loadState({ silent = false } = {}) {
       if (!response.ok) throw new Error(data.error || "Cannot load static data");
       data.staticMode = true;
       state.data = data;
+      prepareAllBaselines();
       state.dirty = false;
       state.lastWorkbookModified = data.workbook.lastModified;
       renderAll();
@@ -517,6 +533,7 @@ function showSavedScenario(id) {
   const save = findSave(id);
   if (!save || !state.data) return;
   state.data.forces = deepClone(save.snapshot.forces);
+  prepareAllBaselines();
   state.activeSaveId = id;
   state.dirty = true;
   renderAll();
