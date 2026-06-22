@@ -2,6 +2,8 @@ const state = {
   data: null,
   dirty: false,
   lastWorkbookModified: null,
+  saves: [],
+  activeSaveId: null,
 };
 
 const fields = [
@@ -215,6 +217,7 @@ function renderAll() {
   renderCombat();
   renderEditors();
   renderRosters();
+  renderSavedScenarios();
   updateFileStatus();
 }
 
@@ -403,6 +406,211 @@ function showToast(message, type = "ok") {
   setTimeout(() => toast.remove(), 2600);
 }
 
+const SAVE_STORAGE_KEY = "waroperation.savedScenarios.v1";
+
+function deepClone(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function loadSavedScenarios() {
+  try {
+    const raw = localStorage.getItem(SAVE_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistSavedScenarios() {
+  localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(state.saves));
+}
+
+function formatSaveDate(value) {
+  return new Date(value).toLocaleString("th-TH", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
+
+function renderSavedScenarios() {
+  const list = byId("savedList");
+  if (!list) return;
+  if (!state.saves.length) {
+    list.innerHTML = `<p class="saved-empty">ยังไม่มีรายการบันทึก กด Save Snapshot เพื่อเก็บสถานะปัจจุบัน</p>`;
+    return;
+  }
+
+  list.innerHTML = state.saves
+    .map((save, index) => {
+      const combat = save.snapshot?.combat || {};
+      const active = save.id === state.activeSaveId ? " · showing" : "";
+      return `
+        <article class="saved-item" data-save-id="${escapeAttr(save.id)}">
+          <div>
+            <div class="saved-title">${escapeHtml(save.name)}${active}</div>
+            <div class="saved-meta">
+              ${formatSaveDate(save.createdAt)} · Red ${formatPercent(combat.blueDamageByRed || 0)} / Blue ${formatPercent(combat.redDamageByBlue || 0)}
+            </div>
+          </div>
+          <div class="saved-actions">
+            <button type="button" data-save-action="show">Show</button>
+            <button type="button" data-save-action="excel">Excel</button>
+            <button type="button" data-save-action="up" ${index === 0 ? "disabled" : ""}>Up</button>
+            <button type="button" data-save-action="down" ${index === state.saves.length - 1 ? "disabled" : ""}>Down</button>
+            <button type="button" class="danger" data-save-action="delete">Delete</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function saveScenarioSnapshot() {
+  if (!state.data) return;
+  recalculate();
+  const input = byId("saveNameInput");
+  const name = (input?.value || "").trim() || `Scenario ${state.saves.length + 1}`;
+  const now = new Date().toISOString();
+  const item = {
+    id: `save-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    name,
+    createdAt: now,
+    snapshot: {
+      forces: deepClone(state.data.forces),
+      combat: deepClone(state.data.combat),
+    },
+  };
+
+  state.saves.unshift(item);
+  state.activeSaveId = item.id;
+  persistSavedScenarios();
+  renderSavedScenarios();
+  if (input) input.value = "";
+  showToast("Saved scenario snapshot", "ok");
+}
+
+function findSave(id) {
+  return state.saves.find((save) => save.id === id);
+}
+
+function showSavedScenario(id) {
+  const save = findSave(id);
+  if (!save || !state.data) return;
+  state.data.forces = deepClone(save.snapshot.forces);
+  state.activeSaveId = id;
+  state.dirty = true;
+  renderAll();
+  showToast(`Showing ${save.name}`, "ok");
+}
+
+function deleteSavedScenario(id) {
+  state.saves = state.saves.filter((save) => save.id !== id);
+  if (state.activeSaveId === id) state.activeSaveId = null;
+  persistSavedScenarios();
+  renderSavedScenarios();
+  showToast("Deleted saved scenario", "ok");
+}
+
+function moveSavedScenario(id, direction) {
+  const index = state.saves.findIndex((save) => save.id === id);
+  const target = index + direction;
+  if (index < 0 || target < 0 || target >= state.saves.length) return;
+  const [item] = state.saves.splice(index, 1);
+  state.saves.splice(target, 0, item);
+  persistSavedScenarios();
+  renderSavedScenarios();
+}
+
+async function downloadSavedScenario(id) {
+  const save = findSave(id);
+  if (!save) return;
+  await downloadStaticWorkbook(save.snapshot.forces, save.name);
+}
+
+function updateFileStatus() {
+  const workbook = state.data?.workbook;
+  if (!workbook) return;
+  if (state.data?.staticMode) {
+    const changed = state.dirty ? "Edited in browser" : "Ready to download";
+    byId("fileStatus").textContent = `${changed} · ${workbook.name}`;
+    byId("saveButton").disabled = false;
+    return;
+  }
+  const changed = state.dirty ? "Unsaved changes" : "Synced";
+  byId("fileStatus").textContent = `${changed} · ${workbook.name}`;
+  byId("saveButton").disabled = !state.dirty;
+}
+
+async function saveState() {
+  if (state.data?.staticMode) {
+    await downloadStaticWorkbook(state.data.forces, "current");
+    return;
+  }
+  try {
+    byId("saveButton").disabled = true;
+    const response = await fetch("/api/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ forces: state.data.forces }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Cannot save workbook");
+    state.data = data;
+    state.dirty = false;
+    state.lastWorkbookModified = data.workbook.lastModified;
+    renderAll();
+    showToast("Saved to Excel and created a backup", "ok");
+  } catch (error) {
+    byId("saveButton").disabled = false;
+    showToast(error.message, "error");
+  }
+}
+
+async function downloadStaticWorkbook(forces = state.data.forces, label = "edited") {
+  try {
+    if (!window.XLSX) {
+      throw new Error("Excel writer is still loading. Please try again in a moment.");
+    }
+    byId("saveButton").disabled = true;
+
+    const sourceName = state.data.workbook.name || "salvo equation .xlsx";
+    const response = await fetch(encodeURI(sourceName), { cache: "no-store" });
+    if (!response.ok) throw new Error("Cannot load the Excel template from this page.");
+
+    const buffer = await response.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array", cellFormula: true, cellStyles: true });
+    writeForceToWorkbook(workbook, forces.red);
+    writeForceToWorkbook(workbook, forces.blue);
+    workbook.Workbook = workbook.Workbook || {};
+    workbook.Workbook.CalcPr = { calcMode: "auto" };
+
+    const output = XLSX.write(workbook, { bookType: "xlsx", type: "array", cellStyles: true });
+    const blob = new Blob([output], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const link = document.createElement("a");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    const safeLabel = String(label || "edited").replace(/[^a-z0-9ก-๙_-]+/gi, "-").slice(0, 40);
+    link.href = URL.createObjectURL(blob);
+    link.download = `salvo-equation-${safeLabel}-${stamp}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(link.href);
+
+    if (forces === state.data.forces) state.dirty = false;
+    updateFileStatus();
+    showToast("Downloaded Excel file", "ok");
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    updateFileStatus();
+  }
+}
+
+state.saves = loadSavedScenarios();
+
 document.addEventListener("input", (event) => {
   const target = event.target;
   const rowEl = target.closest?.("tr[data-force]");
@@ -426,6 +634,19 @@ document.addEventListener("change", (event) => {
 
 byId("saveButton").addEventListener("click", saveState);
 byId("reloadButton").addEventListener("click", () => loadState());
+byId("saveSnapshotButton")?.addEventListener("click", saveScenarioSnapshot);
+byId("savedList")?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-save-action]");
+  const item = event.target.closest("[data-save-id]");
+  if (!button || !item) return;
+  const id = item.dataset.saveId;
+  const action = button.dataset.saveAction;
+  if (action === "show") showSavedScenario(id);
+  if (action === "excel") downloadSavedScenario(id);
+  if (action === "up") moveSavedScenario(id, -1);
+  if (action === "down") moveSavedScenario(id, 1);
+  if (action === "delete") deleteSavedScenario(id);
+});
 
 setInterval(async () => {
   if (state.dirty || !state.data) return;
