@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Salvo Combat Model</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Salvo Equation</p>
+          <h1>Combat Model Dashboard</h1>
+        </div>
+        <div class="actions">
+          <span id="fileStatus" class="file-status">Loading Excel...</span>
+          <button id="reloadButton" class="ghost">Reload Excel</button>
+          <button id="saveButton">Save to Excel</button>
+        </div>
+      </header>
+
+      <section class="combat-section" aria-labelledby="combat-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Part 1</p>
+            <h2 id="combat-title">Combat Model</h2>
+          </div>
+          <p id="advantageText" class="advantage">Waiting for data</p>
+        </div>
+        <div class="combat-grid">
+          <article class="force-card red-card">
+            <div class="card-header">
+              <span>Red Force</span>
+              <strong id="redDamage">0%</strong>
+            </div>
+            <p>damage to Blue</p>
+            <dl>
+              <div><dt>Units</dt><dd id="redUnits">0</dd></div>
+              <div><dt>Fire Power</dt><dd id="redFire">0</dd></div>
+              <div><dt>Defense</dt><dd id="redDefense">0</dd></div>
+              <div><dt>Staying</dt><dd id="redStaying">0</dd></div>
+            </dl>
+          </article>
+          <article class="force-card blue-card">
+            <div class="card-header">
+              <span>Blue Force</span>
+              <strong id="blueDamage">0%</strong>
+            </div>
+            <p>damage to Red</p>
+            <dl>
+              <div><dt>Units</dt><dd id="blueUnits">0</dd></div>
+              <div><dt>Fire Power</dt><dd id="blueFire">0</dd></div>
+              <div><dt>Defense</dt><dd id="blueDefense">0</dd></div>
+              <div><dt>Staying</dt><dd id="blueStaying">0</dd></div>
+            </dl>
+          </article>
+        </div>
+      </section>
+
+      <section class="editor-section" aria-labelledby="editor-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Part 2</p>
+            <h2 id="editor-title">Force Settings</h2>
+          </div>
+          <p class="hint">แก้ไขค่าที่ต้องการ ระบบจะคำนวณใหม่ทันที และกด Save เพื่อเขียนกลับ Excel</p>
+        </div>
+        <div id="editorGrid" class="editor-grid"></div>
+      </section>
+
+      <section class="overview-section" aria-labelledby="overview-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Part 3</p>
+            <h2 id="overview-title">Force Overview</h2>
+          </div>
+          <p class="hint">มองภาพรวมจำนวนเรือ/อากาศยานของแต่ละฝ่าย</p>
+        </div>
+        <div class="overview-grid">
+          <div class="roster-panel red-panel">
+            <h3>Red Force</h3>
+            <div id="redRoster" class="roster"></div>
+          </div>
+          <div class="roster-panel blue-panel">
+            <h3>Blue Force</h3>
+            <div id="blueRoster" class="roster"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
