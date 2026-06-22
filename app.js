@@ -291,6 +291,108 @@ async function saveState() {
   }
 }
 
+function updateFileStatus() {
+  const workbook = state.data?.workbook;
+  if (!workbook) return;
+  if (state.data?.staticMode) {
+    const changed = state.dirty ? "Edited in browser" : "Ready to download";
+    byId("fileStatus").textContent = `${changed} · ${workbook.name}`;
+    byId("saveButton").disabled = false;
+    return;
+  }
+  const changed = state.dirty ? "Unsaved changes" : "Synced";
+  byId("fileStatus").textContent = `${changed} · ${workbook.name}`;
+  byId("saveButton").disabled = !state.dirty;
+}
+
+async function saveState() {
+  if (state.data?.staticMode) {
+    await downloadStaticWorkbook();
+    return;
+  }
+  try {
+    byId("saveButton").disabled = true;
+    const response = await fetch("/api/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ forces: state.data.forces }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Cannot save workbook");
+    state.data = data;
+    state.dirty = false;
+    state.lastWorkbookModified = data.workbook.lastModified;
+    renderAll();
+    showToast("Saved to Excel and created a backup", "ok");
+  } catch (error) {
+    byId("saveButton").disabled = false;
+    showToast(error.message, "error");
+  }
+}
+
+function writeCell(sheet, address, value) {
+  const numericValue = Number(value);
+  const isNumber = value !== "" && value !== null && Number.isFinite(numericValue);
+  sheet[address] = isNumber ? { t: "n", v: numericValue } : { t: "s", v: String(value ?? "") };
+}
+
+function writeForceToWorkbook(workbook, force) {
+  const sheet = workbook.Sheets[force.sheet];
+  if (!sheet) throw new Error(`Missing worksheet: ${force.sheet}`);
+  writeCell(sheet, "C2", force.salvoMode || "minimum");
+  force.rows.forEach((row) => {
+    const r = row.row;
+    writeCell(sheet, `C${r}`, row.unit || "");
+    writeCell(sheet, `D${r}`, row.number || 0);
+    writeCell(sheet, `E${r}`, row.missileNumber || 0);
+    writeCell(sheet, `G${r}`, row.effectiveSalvo || 0);
+    writeCell(sheet, `I${r}`, row.asmdCapability || 0);
+    writeCell(sheet, `J${r}`, row.neutralizeHits || 0);
+  });
+}
+
+async function downloadStaticWorkbook() {
+  try {
+    if (!window.XLSX) {
+      throw new Error("Excel writer is still loading. Please try again in a moment.");
+    }
+    byId("saveButton").disabled = true;
+    recalculate();
+
+    const sourceName = state.data.workbook.name || "salvo equation .xlsx";
+    const response = await fetch(encodeURI(sourceName), { cache: "no-store" });
+    if (!response.ok) throw new Error("Cannot load the Excel template from GitHub Pages.");
+
+    const buffer = await response.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array", cellFormula: true, cellStyles: true });
+    writeForceToWorkbook(workbook, state.data.forces.red);
+    writeForceToWorkbook(workbook, state.data.forces.blue);
+    workbook.Workbook = workbook.Workbook || {};
+    workbook.Workbook.CalcPr = { calcMode: "auto" };
+
+    const output = XLSX.write(workbook, { bookType: "xlsx", type: "array", cellStyles: true });
+    const blob = new Blob([output], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const link = document.createElement("a");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    link.href = URL.createObjectURL(blob);
+    link.download = `salvo-equation-edited-${stamp}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(link.href);
+
+    state.dirty = false;
+    updateFileStatus();
+    showToast("Downloaded edited Excel file", "ok");
+  } catch (error) {
+    showToast(error.message, "error");
+  } finally {
+    updateFileStatus();
+  }
+}
+
 function showToast(message, type = "ok") {
   const oldToast = document.querySelector(".toast");
   if (oldToast) oldToast.remove();
