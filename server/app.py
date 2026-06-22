@@ -18,7 +18,7 @@ PUBLIC_DIR = ROOT / "public"
 WORKBOOK_PATH = ROOT / "salvo equation .xlsx"
 BACKUP_DIR = ROOT / "backups"
 
-SALVO_VALUES = {"minimum": 1, "optimum": 2, "maximum": 3}
+SALVO_VALUES = {"": 0, "blank": 0, "minimum": 1, "optimum": 2, "maximum": 3}
 
 
 @dataclass(frozen=True)
@@ -56,7 +56,7 @@ def clean_number(value: float) -> int | float:
 
 def read_force_sheet(workbook: Any, config: ForceConfig) -> dict[str, Any]:
     ws = workbook[config.sheet]
-    salvo_mode = str(ws["C2"].value or "minimum").strip().lower()
+    salvo_mode = str(ws["C2"].value or "").strip().lower()
     salvo_factor = SALVO_VALUES.get(salvo_mode, 0)
     rows = []
 
@@ -93,7 +93,7 @@ def read_force_sheet(workbook: Any, config: ForceConfig) -> dict[str, Any]:
         "label": config.label,
         "color": config.color,
         "sheet": config.sheet,
-        "salvoMode": salvo_mode if salvo_mode in SALVO_VALUES else "minimum",
+        "salvoMode": salvo_mode if salvo_mode in SALVO_VALUES else "",
         "salvoFactor": salvo_factor,
         "rows": rows,
         "totals": totals,
@@ -177,9 +177,9 @@ def coerce_payload_row(row: dict[str, Any], fallback_row: int) -> dict[str, Any]
 
 def write_force_sheet(workbook: Any, config: ForceConfig, force_payload: dict[str, Any]) -> None:
     ws = workbook[config.sheet]
-    salvo_mode = str(force_payload.get("salvoMode") or "minimum").strip().lower()
+    salvo_mode = str(force_payload.get("salvoMode") or "").strip().lower()
     if salvo_mode not in SALVO_VALUES:
-        salvo_mode = "minimum"
+        salvo_mode = ""
     ws["C2"] = salvo_mode
 
     rows_by_number = {

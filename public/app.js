@@ -7,7 +7,7 @@ const state = {
   advantageMode: "auto",
 };
 
-const APP_VERSION = "v2026.06.22.4";
+const APP_VERSION = "v2026.06.22.5";
 
 const fields = [
   ["number", "Number", "number"],
@@ -31,7 +31,7 @@ const formatPercent = (value) =>
 
 const byId = (id) => document.getElementById(id);
 
-const getSalvoFactor = (mode) => ({ minimum: 1, optimum: 2, maximum: 3 })[mode] || 0;
+const getSalvoFactor = (mode) => ({ "": 0, blank: 0, minimum: 1, optimum: 2, maximum: 3 })[mode] || 0;
 
 function calculateForce(force) {
   const factor = getSalvoFactor(force.salvoMode);
@@ -135,6 +135,7 @@ function renderEditors() {
         <div class="toolbar-control">
           <label for="${key}-mode">Salvo size</label>
           <select id="${key}-mode" data-force="${key}" data-field="salvoMode">
+            <option value="">ว่าง</option>
             <option value="minimum">minimum</option>
             <option value="optimum">optimum</option>
             <option value="maximum">maximum</option>
@@ -381,7 +382,7 @@ function writeCell(sheet, address, value) {
 function writeForceToWorkbook(workbook, force) {
   const sheet = workbook.Sheets[force.sheet];
   if (!sheet) throw new Error(`Missing worksheet: ${force.sheet}`);
-  writeCell(sheet, "C2", force.salvoMode || "minimum");
+  writeCell(sheet, "C2", force.salvoMode ?? "");
   force.rows.forEach((row) => {
     const r = row.row;
     writeCell(sheet, `C${r}`, row.unit || "");
