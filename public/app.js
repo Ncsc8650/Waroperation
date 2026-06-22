@@ -4,11 +4,13 @@ const state = {
   lastWorkbookModified: null,
   saves: [],
   activeSaveId: null,
+  advantageMode: "auto",
 };
 
 const fields = [
   ["number", "Number", "number"],
   ["missileNumber", "Missiles", "number"],
+  ["salvoSize", "Salvo size", "number"],
   ["effectiveSalvo", "Eff. salvo", "number"],
   ["asmdCapability", "ASMD", "number"],
   ["neutralizeHits", "Neutralize", "number"],
@@ -102,10 +104,13 @@ function renderCombat() {
 
   const advantage = byId("advantageText");
   advantage.className = "advantage";
-  if (combat.advantage === "red") {
+  const selectedAdvantage = state.advantageMode === "auto" ? combat.advantage : state.advantageMode;
+  const advantageSelect = byId("advantageSelect");
+  if (advantageSelect) advantageSelect.value = state.advantageMode;
+  if (selectedAdvantage === "red") {
     advantage.textContent = "Current advantage: Red Force";
     advantage.classList.add("red");
-  } else if (combat.advantage === "blue") {
+  } else if (selectedAdvantage === "blue") {
     advantage.textContent = "Current advantage: Blue Force";
     advantage.classList.add("blue");
   } else {
@@ -159,10 +164,12 @@ function renderRow(forceKey, row, index) {
     <tr data-force="${forceKey}" data-index="${index}">
       <td><input class="unit-input" value="${escapeAttr(row.unit)}" data-field="unit" /></td>
       ${fields
-        .map(
-          ([key, , type]) =>
-            `<td><input type="${type}" step="0.1" value="${row[key] ?? 0}" data-field="${key}" /></td>`,
-        )
+        .map(([key, , type]) => {
+          if (key === "salvoSize") {
+            return `<td class="readonly" data-calc="salvoSize">${formatNumber(row.salvoSize)}</td>`;
+          }
+          return `<td><input type="${type}" step="0.1" value="${row[key] ?? 0}" data-field="${key}" /></td>`;
+        })
         .join("")}
       <td class="readonly" data-calc="firePower">${formatNumber(row.firePower)}</td>
       <td class="readonly" data-calc="defensePower">${formatNumber(row.defensePower)}</td>
@@ -183,6 +190,7 @@ function updateCalculatedCells() {
   document.querySelectorAll("tr[data-force]").forEach((tr) => {
     const force = state.data.forces[tr.dataset.force];
     const row = force.rows[Number(tr.dataset.index)];
+    tr.querySelector('[data-calc="salvoSize"]').textContent = formatNumber(row.salvoSize);
     tr.querySelector('[data-calc="firePower"]').textContent = formatNumber(row.firePower);
     tr.querySelector('[data-calc="defensePower"]').textContent = formatNumber(row.defensePower);
     tr.querySelector('[data-calc="stayingPower"]').textContent = formatNumber(row.stayingPower);
@@ -229,6 +237,15 @@ function refreshAfterInput() {
   renderCombat();
   renderRosters();
   updateFileStatus();
+}
+
+function consumeMissilesForSalvo(force) {
+  const factor = { minimum: 1, optimum: 2, maximum: 3 }[force.salvoMode] || 0;
+  force.rows = force.rows.map((row) => ({
+    ...row,
+    salvoSize: factor,
+    missileNumber: Number(row.missileNumber || 0) - factor,
+  }));
 }
 
 function updateFileStatus() {
@@ -628,10 +645,18 @@ document.addEventListener("input", (event) => {
 
 document.addEventListener("change", (event) => {
   const target = event.target;
-  if (!target.matches("select[data-field='salvoMode']")) return;
-  state.data.forces[target.dataset.force].salvoMode = target.value;
-  state.dirty = true;
-  refreshAfterInput();
+  if (target.matches("select[data-field='salvoMode']")) {
+    const force = state.data.forces[target.dataset.force];
+    force.salvoMode = target.value;
+    consumeMissilesForSalvo(force);
+    state.dirty = true;
+    renderAll();
+    return;
+  }
+  if (target.id === "advantageSelect") {
+    state.advantageMode = target.value;
+    renderCombat();
+  }
 });
 
 byId("saveButton").addEventListener("click", saveState);

@@ -154,6 +154,20 @@ section {
   padding: 5px 10px;
 }
 
+.advantage-control {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.advantage-control label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .advantage.red {
   background: var(--red-soft);
   color: var(--red);
