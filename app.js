@@ -7,7 +7,7 @@ const state = {
   advantageMode: "auto",
 };
 
-const APP_VERSION = "v2026.06.22.3";
+const APP_VERSION = "v2026.06.22.4";
 
 const fields = [
   ["number", "Number", "number"],
@@ -261,9 +261,8 @@ function consumeMissilesForSalvo(force) {
   const factor = getSalvoFactor(force.salvoMode);
   force.rows = force.rows.map((row) => ({
     ...row,
-    baseMissileNumber: Number(row.baseMissileNumber ?? row.missileNumber ?? 0),
     salvoSize: factor,
-    missileNumber: Math.max(Number(row.baseMissileNumber ?? row.missileNumber ?? 0) - factor, 0),
+    missileNumber: Math.max(Number(row.missileNumber ?? 0) - factor, 0),
   }));
 }
 
@@ -675,15 +674,6 @@ document.addEventListener("input", (event) => {
 
 document.addEventListener("change", (event) => {
   const target = event.target;
-  if (target.matches("input[data-field='missileNumber']")) {
-    const rowEl = target.closest("tr[data-force]");
-    if (!rowEl) return;
-    const force = state.data.forces[rowEl.dataset.force];
-    consumeMissilesForSalvo(force);
-    state.dirty = true;
-    renderAll();
-    return;
-  }
   if (target.matches("select[data-field='salvoMode']")) {
     const force = state.data.forces[target.dataset.force];
     force.salvoMode = target.value;
