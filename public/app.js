@@ -7,7 +7,7 @@ const state = {
   advantageMode: "auto",
 };
 
-const APP_VERSION = "v2026.06.22.2";
+const APP_VERSION = "v2026.06.22.3";
 
 const fields = [
   ["number", "Number", "number"],
@@ -263,7 +263,7 @@ function consumeMissilesForSalvo(force) {
     ...row,
     baseMissileNumber: Number(row.baseMissileNumber ?? row.missileNumber ?? 0),
     salvoSize: factor,
-    missileNumber: Number(row.baseMissileNumber ?? row.missileNumber ?? 0) - factor,
+    missileNumber: Math.max(Number(row.baseMissileNumber ?? row.missileNumber ?? 0) - factor, 0),
   }));
 }
 
@@ -675,6 +675,15 @@ document.addEventListener("input", (event) => {
 
 document.addEventListener("change", (event) => {
   const target = event.target;
+  if (target.matches("input[data-field='missileNumber']")) {
+    const rowEl = target.closest("tr[data-force]");
+    if (!rowEl) return;
+    const force = state.data.forces[rowEl.dataset.force];
+    consumeMissilesForSalvo(force);
+    state.dirty = true;
+    renderAll();
+    return;
+  }
   if (target.matches("select[data-field='salvoMode']")) {
     const force = state.data.forces[target.dataset.force];
     force.salvoMode = target.value;
@@ -692,6 +701,7 @@ document.addEventListener("change", (event) => {
 byId("saveButton").addEventListener("click", saveState);
 byId("reloadButton").addEventListener("click", () => loadState());
 setText("appVersion", APP_VERSION);
+byId("part2SaveButton")?.addEventListener("click", saveState);
 byId("saveSnapshotButton")?.addEventListener("click", saveScenarioSnapshot);
 byId("savedList")?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-save-action]");

@@ -12,7 +12,7 @@
         <div>
           <p class="eyebrow">Salvo Equation</p>
           <h1>Combat Model Dashboard</h1>
-          <span id="appVersion" class="app-version">v2026.06.22.2</span>
+          <span id="appVersion" class="app-version">v2026.06.22.3</span>
         </div>
         <div class="actions">
           <span id="fileStatus" class="file-status">Loading Excel...</span>
@@ -97,7 +97,10 @@
             <p class="eyebrow">Part 2</p>
             <h2 id="editor-title">Force Settings</h2>
           </div>
-          <p class="hint">แก้ไขค่าที่ต้องการ ระบบจะคำนวณใหม่ทันที และกด Save เพื่อเขียนกลับ Excel</p>
+          <div class="section-actions">
+            <p class="hint">แก้ไขค่าในส่วนที่ 2 แล้วคำนวณ Combat Model ทันที</p>
+            <button id="part2SaveButton" type="button" class="ghost">Save Part 2</button>
+          </div>
         </div>
         <div id="editorGrid" class="editor-grid"></div>
       </section>
