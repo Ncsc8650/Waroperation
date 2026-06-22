@@ -87,6 +87,8 @@ function renderCombat() {
 
   setText("redDamage", formatPercent(combat.blueDamageByRed));
   setText("blueDamage", formatPercent(combat.redDamageByBlue));
+  setText("blueDamageByRedExact", Number(combat.blueDamageByRed || 0).toFixed(9));
+  setText("redDamageByBlueExact", Number(combat.redDamageByBlue || 0).toFixed(9));
 
   setText("redUnits", formatNumber(red.totals.units));
   setText("redFire", formatNumber(red.totals.firePower));
