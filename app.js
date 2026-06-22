@@ -85,8 +85,8 @@ function renderCombat() {
   const { red, blue } = state.data.forces;
   const combat = state.data.combat;
 
-  setText("redDamage", formatPercent(combat.blueDamageByRed));
-  setText("blueDamage", formatPercent(combat.redDamageByBlue));
+  setText("redDamage", formatPercent(combat.redDamageByBlue));
+  setText("blueDamage", formatPercent(combat.blueDamageByRed));
   setText("blueDamageByRedExact", Number(combat.blueDamageByRed || 0).toFixed(9));
   setText("redDamageByBlueExact", Number(combat.redDamageByBlue || 0).toFixed(9));
 
@@ -452,7 +452,7 @@ function renderSavedScenarios() {
           <div>
             <div class="saved-title">${escapeHtml(save.name)}${active}</div>
             <div class="saved-meta">
-              ${formatSaveDate(save.createdAt)} · Red ${formatPercent(combat.blueDamageByRed || 0)} / Blue ${formatPercent(combat.redDamageByBlue || 0)}
+              ${formatSaveDate(save.createdAt)} · Blue ${formatPercent(combat.blueDamageByRed || 0)} / Red ${formatPercent(combat.redDamageByBlue || 0)}
             </div>
           </div>
           <div class="saved-actions">
