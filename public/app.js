@@ -7,6 +7,8 @@ const state = {
   advantageMode: "auto",
 };
 
+const APP_VERSION = "v2026.06.22.2";
+
 const fields = [
   ["number", "Number", "number"],
   ["missileNumber", "Missiles", "number"],
@@ -29,8 +31,10 @@ const formatPercent = (value) =>
 
 const byId = (id) => document.getElementById(id);
 
+const getSalvoFactor = (mode) => ({ minimum: 1, optimum: 2, maximum: 3 })[mode] || 0;
+
 function calculateForce(force) {
-  const factor = { minimum: 1, optimum: 2, maximum: 3 }[force.salvoMode] || 0;
+  const factor = getSalvoFactor(force.salvoMode);
   const rows = force.rows.map((row) => {
     const number = Number(row.number || 0);
     const effectiveSalvo = Number(row.effectiveSalvo || 0);
@@ -168,7 +172,8 @@ function renderRow(forceKey, row, index) {
           if (key === "salvoSize") {
             return `<td class="readonly" data-calc="salvoSize">${formatNumber(row.salvoSize)}</td>`;
           }
-          return `<td><input type="${type}" step="0.1" value="${row[key] ?? 0}" data-field="${key}" /></td>`;
+          const step = key === "number" || key === "missileNumber" ? "1" : "0.1";
+          return `<td><input type="${type}" step="${step}" value="${row[key] ?? 0}" data-field="${key}" /></td>`;
         })
         .join("")}
       <td class="readonly" data-calc="firePower">${formatNumber(row.firePower)}</td>
@@ -242,7 +247,7 @@ function refreshAfterInput() {
 function prepareForceBaselines(force) {
   force.rows = force.rows.map((row) => ({
     ...row,
-    baseMissileNumber: row.baseMissileNumber ?? Number(row.missileNumber ?? 0),
+    baseMissileNumber: Number(row.baseMissileNumber ?? row.missileNumber ?? 0),
   }));
 }
 
@@ -253,12 +258,12 @@ function prepareAllBaselines() {
 }
 
 function consumeMissilesForSalvo(force) {
-  const factor = { minimum: 1, optimum: 2, maximum: 3 }[force.salvoMode] || 0;
+  const factor = getSalvoFactor(force.salvoMode);
   force.rows = force.rows.map((row) => ({
     ...row,
-    baseMissileNumber: row.baseMissileNumber ?? Number(row.missileNumber ?? 0),
+    baseMissileNumber: Number(row.baseMissileNumber ?? row.missileNumber ?? 0),
     salvoSize: factor,
-    missileNumber: (row.baseMissileNumber ?? Number(row.missileNumber ?? 0)) - factor,
+    missileNumber: Number(row.baseMissileNumber ?? row.missileNumber ?? 0) - factor,
   }));
 }
 
@@ -655,7 +660,15 @@ document.addEventListener("input", (event) => {
   const force = state.data.forces[rowEl.dataset.force];
   const row = force.rows[Number(rowEl.dataset.index)];
   const field = target.dataset.field;
-  row[field] = field === "unit" ? target.value : Number(target.value || 0);
+  if (field === "unit") {
+    row[field] = target.value;
+  } else {
+    const value = Number(target.value || 0);
+    row[field] = value;
+    if (field === "missileNumber") {
+      row.baseMissileNumber = value;
+    }
+  }
   state.dirty = true;
   refreshAfterInput();
 });
@@ -678,6 +691,7 @@ document.addEventListener("change", (event) => {
 
 byId("saveButton").addEventListener("click", saveState);
 byId("reloadButton").addEventListener("click", () => loadState());
+setText("appVersion", APP_VERSION);
 byId("saveSnapshotButton")?.addEventListener("click", saveScenarioSnapshot);
 byId("savedList")?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-save-action]");
