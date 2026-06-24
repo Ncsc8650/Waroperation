@@ -7,7 +7,7 @@ const state = {
   advantageMode: "auto",
 };
 
-const APP_VERSION = "v2026.06.24.1";
+const APP_VERSION = "v2026.06.24.2";
 
 const fields = [
   ["number", "Number", "number"],
@@ -55,6 +55,18 @@ function calculateForce(force) {
 
   force.salvoFactor = factor;
   force.rows = rows;
+  force.columnTotals = {
+    number: rows.reduce((sum, row) => sum + Number(row.number || 0), 0),
+    missileNumber: rows.reduce((sum, row) => sum + Number(row.missileNumber || 0), 0),
+    missilesTotal: rows.reduce((sum, row) => sum + Number(row.missilesTotal || 0), 0),
+    salvoSize: rows.reduce((sum, row) => sum + Number(row.salvoSize || 0), 0),
+    effectiveSalvo: rows.reduce((sum, row) => sum + Number(row.effectiveSalvo || 0), 0),
+    asmdCapability: rows.reduce((sum, row) => sum + Number(row.asmdCapability || 0), 0),
+    neutralizeHits: rows.reduce((sum, row) => sum + Number(row.neutralizeHits || 0), 0),
+    firePower: rows.reduce((sum, row) => sum + Number(row.firePower || 0), 0),
+    defensePower: rows.reduce((sum, row) => sum + Number(row.defensePower || 0), 0),
+    stayingPower: rows.reduce((sum, row) => sum + Number(row.stayingPower || 0), 0),
+  };
   force.totals = {
     units: rows.reduce(
       (sum, row) => sum + (row.countInUnitTotal ? Number(row.number || 0) : 0),
@@ -139,7 +151,6 @@ function renderEditors() {
     card.innerHTML = `
       <div class="editor-toolbar">
         <h3>${force.label}</h3>
-        <span id="${key}MissilesTotalLabel" class="toolbar-total">Missiles total: ${formatNumber(force.totals?.missilesTotal || 0)}</span>
         <div class="toolbar-control">
           <label for="${key}-mode">Salvo size</label>
           <select id="${key}-mode" data-force="${key}" data-field="salvoMode">
@@ -164,6 +175,9 @@ function renderEditors() {
           <tbody>
             ${force.rows.map((row, index) => renderRow(force.key, row, index)).join("")}
           </tbody>
+          <tfoot>
+            ${renderTotalRow(force)}
+          </tfoot>
         </table>
       </div>
     `;
@@ -192,6 +206,21 @@ function renderRow(forceKey, row, index) {
   `;
 }
 
+function renderTotalRow(force) {
+  const totals = force.columnTotals || {};
+  return `
+    <tr class="total-row">
+      <td>Total</td>
+      ${fields
+        .map(([key]) => `<td id="${force.key}-${key}-total" class="readonly">${formatNumber(totals[key])}</td>`)
+        .join("")}
+      <td id="${force.key}-firePower-total" class="readonly">${formatNumber(totals.firePower)}</td>
+      <td id="${force.key}-defensePower-total" class="readonly">${formatNumber(totals.defensePower)}</td>
+      <td id="${force.key}-stayingPower-total" class="readonly">${formatNumber(totals.stayingPower)}</td>
+    </tr>
+  `;
+}
+
 function escapeAttr(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -201,8 +230,6 @@ function escapeAttr(value) {
 }
 
 function updateCalculatedCells() {
-  setText("redMissilesTotalLabel", `Missiles total: ${formatNumber(state.data.forces.red.totals.missilesTotal)}`);
-  setText("blueMissilesTotalLabel", `Missiles total: ${formatNumber(state.data.forces.blue.totals.missilesTotal)}`);
   document.querySelectorAll("tr[data-force]").forEach((tr) => {
     const force = state.data.forces[tr.dataset.force];
     const row = force.rows[Number(tr.dataset.index)];
@@ -211,6 +238,13 @@ function updateCalculatedCells() {
     tr.querySelector('[data-calc="firePower"]').textContent = formatNumber(row.firePower);
     tr.querySelector('[data-calc="defensePower"]').textContent = formatNumber(row.defensePower);
     tr.querySelector('[data-calc="stayingPower"]').textContent = formatNumber(row.stayingPower);
+  });
+  ["red", "blue"].forEach((forceKey) => {
+    const totals = state.data.forces[forceKey].columnTotals || {};
+    [...fields.map(([key]) => key), "firePower", "defensePower", "stayingPower"].forEach((key) => {
+      const cell = byId(`${forceKey}-${key}-total`);
+      if (cell) cell.textContent = formatNumber(totals[key]);
+    });
   });
 }
 

@@ -388,16 +388,6 @@ dd {
   margin: 0;
 }
 
-.toolbar-total {
-  background: rgba(255, 255, 255, 0.68);
-  border: 1px solid rgba(255, 255, 255, 0.84);
-  border-radius: 999px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
-  padding: 4px 8px;
-}
-
 .toolbar-control {
   align-items: center;
   display: flex;
@@ -463,6 +453,13 @@ td .unit-input {
 .readonly {
   color: var(--muted);
   font-weight: 800;
+}
+
+.total-row td {
+  background: rgba(255, 255, 255, 0.8);
+  border-top: 2px solid rgba(24, 33, 47, 0.2);
+  color: var(--text);
+  font-weight: 900;
 }
 
 .roster-panel {
