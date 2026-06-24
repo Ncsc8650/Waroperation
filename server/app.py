@@ -70,6 +70,11 @@ def read_force_sheet(workbook: Any, config: ForceConfig) -> dict[str, Any]:
         fire_power = count * salvo_factor * effective_salvo
         defense_power = count * asmd
         staying_power = count * neutralize
+        sum_fire_power = count * fire_power
+        sum_asmd = count * asmd
+        sum_neutralize = count * neutralize
+        sum_defense_power = count * defense_power
+        sum_staying_power = count * staying_power
 
         rows.append(
             {
@@ -87,6 +92,11 @@ def read_force_sheet(workbook: Any, config: ForceConfig) -> dict[str, Any]:
                 "neutralizeHits": clean_number(neutralize),
                 "defensePower": clean_number(defense_power),
                 "stayingPower": clean_number(staying_power),
+                "sumFirePower": clean_number(sum_fire_power),
+                "sumAsmdCapability": clean_number(sum_asmd),
+                "sumNeutralizeHits": clean_number(sum_neutralize),
+                "sumDefensePower": clean_number(sum_defense_power),
+                "sumStayingPower": clean_number(sum_staying_power),
             }
         )
 
@@ -108,10 +118,12 @@ def calculate_totals(rows: list[dict[str, Any]]) -> dict[str, int | float]:
         "units": clean_number(
             sum(as_number(row.get("number")) for row in rows if row.get("countInUnitTotal", True))
         ),
-        "firePower": clean_number(sum(as_number(row.get("firePower")) for row in rows)),
+        "firePower": clean_number(sum(as_number(row.get("sumFirePower")) for row in rows)),
         "missilesTotal": clean_number(sum(as_number(row.get("missilesTotal")) for row in rows)),
-        "defensePower": clean_number(sum(as_number(row.get("defensePower")) for row in rows)),
-        "stayingPower": clean_number(sum(as_number(row.get("stayingPower")) for row in rows)),
+        "asmdCapability": clean_number(sum(as_number(row.get("sumAsmdCapability")) for row in rows)),
+        "neutralizeHits": clean_number(sum(as_number(row.get("sumNeutralizeHits")) for row in rows)),
+        "defensePower": clean_number(sum(as_number(row.get("sumDefensePower")) for row in rows)),
+        "stayingPower": clean_number(sum(as_number(row.get("sumStayingPower")) for row in rows)),
     }
 
 

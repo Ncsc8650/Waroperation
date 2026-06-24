@@ -308,7 +308,7 @@ dd {
 .editor-grid {
   display: grid;
   gap: 10px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .save-controls {
@@ -416,7 +416,7 @@ input {
 
 table {
   border-collapse: collapse;
-  min-width: 680px;
+  min-width: 1320px;
   width: 100%;
 }
 
@@ -453,6 +453,10 @@ td .unit-input {
 .readonly {
   color: var(--muted);
   font-weight: 800;
+}
+
+.sum-cell {
+  color: var(--text);
 }
 
 .total-row td {

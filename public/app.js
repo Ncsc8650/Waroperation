@@ -7,7 +7,7 @@ const state = {
   advantageMode: "auto",
 };
 
-const APP_VERSION = "v2026.06.24.3";
+const APP_VERSION = "v2026.06.24.4";
 
 const fields = [
   ["number", "Number", "number"],
@@ -17,6 +17,20 @@ const fields = [
   ["effectiveSalvo", "Eff. salvo", "number"],
   ["asmdCapability", "ASMD", "number"],
   ["neutralizeHits", "Neutralize", "number"],
+];
+
+const calculatedFields = [
+  ["firePower", "Fire"],
+  ["defensePower", "Defense"],
+  ["stayingPower", "Staying"],
+];
+
+const sumFields = [
+  ["sumFirePower", "sum(Fire Power)"],
+  ["sumAsmdCapability", "sum(ASMD capability)"],
+  ["sumNeutralizeHits", "sum(number to neutralize)"],
+  ["sumDefensePower", "sum(Defense Power)"],
+  ["sumStayingPower", "sum(Staying Power)"],
 ];
 
 const formatNumber = (value, digits = 1) => {
@@ -43,39 +57,43 @@ function calculateForce(force) {
     const effectiveSalvo = Number(row.effectiveSalvo || 0);
     const asmd = Number(row.asmdCapability || 0);
     const neutralize = Number(row.neutralizeHits || 0);
+    const firePower = number * factor * effectiveSalvo;
+    const defensePower = number * asmd;
+    const stayingPower = number * neutralize;
     return {
       ...row,
       missilesTotal,
       salvoSize: factor,
-      firePower: number * factor * effectiveSalvo,
-      defensePower: number * asmd,
-      stayingPower: number * neutralize,
+      firePower,
+      defensePower,
+      stayingPower,
+      sumFirePower: number * firePower,
+      sumAsmdCapability: number * asmd,
+      sumNeutralizeHits: number * neutralize,
+      sumDefensePower: number * defensePower,
+      sumStayingPower: number * stayingPower,
     };
   });
 
   force.salvoFactor = factor;
   force.rows = rows;
-  force.columnTotals = {
-    number: rows.reduce((sum, row) => sum + Number(row.number || 0), 0),
-    missileNumber: rows.reduce((sum, row) => sum + Number(row.missileNumber || 0), 0),
-    missilesTotal: rows.reduce((sum, row) => sum + Number(row.missilesTotal || 0), 0),
-    salvoSize: rows.reduce((sum, row) => sum + Number(row.salvoSize || 0), 0),
-    effectiveSalvo: rows.reduce((sum, row) => sum + Number(row.effectiveSalvo || 0), 0),
-    asmdCapability: rows.reduce((sum, row) => sum + Number(row.asmdCapability || 0), 0),
-    neutralizeHits: rows.reduce((sum, row) => sum + Number(row.neutralizeHits || 0), 0),
-    firePower: rows.reduce((sum, row) => sum + Number(row.firePower || 0), 0),
-    defensePower: rows.reduce((sum, row) => sum + Number(row.defensePower || 0), 0),
-    stayingPower: rows.reduce((sum, row) => sum + Number(row.stayingPower || 0), 0),
-  };
+  force.columnTotals = Object.fromEntries(
+    [...fields, ...calculatedFields, ...sumFields].map(([key]) => [
+      key,
+      rows.reduce((sum, row) => sum + Number(row[key] || 0), 0),
+    ]),
+  );
   force.totals = {
     units: rows.reduce(
       (sum, row) => sum + (row.countInUnitTotal ? Number(row.number || 0) : 0),
       0,
     ),
-    firePower: rows.reduce((sum, row) => sum + Number(row.firePower || 0), 0),
+    firePower: rows.reduce((sum, row) => sum + Number(row.sumFirePower || 0), 0),
     missilesTotal: rows.reduce((sum, row) => sum + Number(row.missilesTotal || 0), 0),
-    defensePower: rows.reduce((sum, row) => sum + Number(row.defensePower || 0), 0),
-    stayingPower: rows.reduce((sum, row) => sum + Number(row.stayingPower || 0), 0),
+    asmdCapability: rows.reduce((sum, row) => sum + Number(row.sumAsmdCapability || 0), 0),
+    neutralizeHits: rows.reduce((sum, row) => sum + Number(row.sumNeutralizeHits || 0), 0),
+    defensePower: rows.reduce((sum, row) => sum + Number(row.sumDefensePower || 0), 0),
+    stayingPower: rows.reduce((sum, row) => sum + Number(row.sumStayingPower || 0), 0),
   };
 }
 
@@ -167,9 +185,8 @@ function renderEditors() {
             <tr>
               <th>Unit</th>
               ${fields.map(([, label]) => `<th>${label}</th>`).join("")}
-              <th>Fire</th>
-              <th>Defense</th>
-              <th>Staying</th>
+              ${calculatedFields.map(([, label]) => `<th>${label}</th>`).join("")}
+              ${sumFields.map(([, label]) => `<th>${label}</th>`).join("")}
             </tr>
           </thead>
           <tbody>
@@ -199,9 +216,12 @@ function renderRow(forceKey, row, index) {
           return `<td><input type="${type}" step="${step}" value="${row[key] ?? 0}" data-field="${key}" /></td>`;
         })
         .join("")}
-      <td class="readonly" data-calc="firePower">${formatNumber(row.firePower)}</td>
-      <td class="readonly" data-calc="defensePower">${formatNumber(row.defensePower)}</td>
-      <td class="readonly" data-calc="stayingPower">${formatNumber(row.stayingPower)}</td>
+      ${calculatedFields
+        .map(([key]) => `<td class="readonly" data-calc="${key}">${formatNumber(row[key])}</td>`)
+        .join("")}
+      ${sumFields
+        .map(([key]) => `<td class="readonly sum-cell" data-calc="${key}">${formatNumber(row[key])}</td>`)
+        .join("")}
     </tr>
   `;
 }
@@ -214,9 +234,12 @@ function renderTotalRow(force) {
       ${fields
         .map(([key]) => `<td id="${force.key}-${key}-total" class="readonly">${formatNumber(totals[key])}</td>`)
         .join("")}
-      <td id="${force.key}-firePower-total" class="readonly">${formatNumber(totals.firePower)}</td>
-      <td id="${force.key}-defensePower-total" class="readonly">${formatNumber(totals.defensePower)}</td>
-      <td id="${force.key}-stayingPower-total" class="readonly">${formatNumber(totals.stayingPower)}</td>
+      ${calculatedFields
+        .map(([key]) => `<td id="${force.key}-${key}-total" class="readonly">${formatNumber(totals[key])}</td>`)
+        .join("")}
+      ${sumFields
+        .map(([key]) => `<td id="${force.key}-${key}-total" class="readonly sum-cell">${formatNumber(totals[key])}</td>`)
+        .join("")}
     </tr>
   `;
 }
@@ -238,10 +261,13 @@ function updateCalculatedCells() {
     tr.querySelector('[data-calc="firePower"]').textContent = formatNumber(row.firePower);
     tr.querySelector('[data-calc="defensePower"]').textContent = formatNumber(row.defensePower);
     tr.querySelector('[data-calc="stayingPower"]').textContent = formatNumber(row.stayingPower);
+    sumFields.forEach(([key]) => {
+      tr.querySelector(`[data-calc="${key}"]`).textContent = formatNumber(row[key]);
+    });
   });
   ["red", "blue"].forEach((forceKey) => {
     const totals = state.data.forces[forceKey].columnTotals || {};
-    [...fields.map(([key]) => key), "firePower", "defensePower", "stayingPower"].forEach((key) => {
+    [...fields, ...calculatedFields, ...sumFields].map(([key]) => key).forEach((key) => {
       const cell = byId(`${forceKey}-${key}-total`);
       if (cell) cell.textContent = formatNumber(totals[key]);
     });
