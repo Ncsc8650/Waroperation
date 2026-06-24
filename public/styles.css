@@ -283,7 +283,7 @@ section {
 dl {
   display: grid;
   gap: 6px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   margin: 0;
 }
 
@@ -386,6 +386,16 @@ dd {
 
 .editor-toolbar h3 {
   margin: 0;
+}
+
+.toolbar-total {
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 8px;
 }
 
 .toolbar-control {

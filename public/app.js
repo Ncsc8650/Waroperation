@@ -7,11 +7,12 @@ const state = {
   advantageMode: "auto",
 };
 
-const APP_VERSION = "v2026.06.22.5";
+const APP_VERSION = "v2026.06.24.1";
 
 const fields = [
   ["number", "Number", "number"],
   ["missileNumber", "Missiles", "number"],
+  ["missilesTotal", "Missiles total", "number"],
   ["salvoSize", "Salvo size", "number"],
   ["effectiveSalvo", "Eff. salvo", "number"],
   ["asmdCapability", "ASMD", "number"],
@@ -37,13 +38,16 @@ function calculateForce(force) {
   const factor = getSalvoFactor(force.salvoMode);
   const rows = force.rows.map((row) => {
     const number = Number(row.number || 0);
+    const missileNumber = Number(row.missileNumber || 0);
+    const missilesTotal = number * missileNumber;
     const effectiveSalvo = Number(row.effectiveSalvo || 0);
     const asmd = Number(row.asmdCapability || 0);
     const neutralize = Number(row.neutralizeHits || 0);
     return {
       ...row,
+      missilesTotal,
       salvoSize: factor,
-      firePower: number * factor * effectiveSalvo,
+      firePower: missilesTotal * factor * effectiveSalvo,
       defensePower: number * asmd,
       stayingPower: number * neutralize,
     };
@@ -57,6 +61,7 @@ function calculateForce(force) {
       0,
     ),
     firePower: rows.reduce((sum, row) => sum + Number(row.firePower || 0), 0),
+    missilesTotal: rows.reduce((sum, row) => sum + Number(row.missilesTotal || 0), 0),
     defensePower: rows.reduce((sum, row) => sum + Number(row.defensePower || 0), 0),
     stayingPower: rows.reduce((sum, row) => sum + Number(row.stayingPower || 0), 0),
   };
@@ -97,11 +102,13 @@ function renderCombat() {
   setText("redDamageByBlueExact", Number(combat.redDamageByBlue || 0).toFixed(9));
 
   setText("redUnits", formatNumber(red.totals.units));
+  setText("redMissilesTotal", formatNumber(red.totals.missilesTotal));
   setText("redFire", formatNumber(red.totals.firePower));
   setText("redDefense", formatNumber(red.totals.defensePower));
   setText("redStaying", formatNumber(red.totals.stayingPower));
 
   setText("blueUnits", formatNumber(blue.totals.units));
+  setText("blueMissilesTotal", formatNumber(blue.totals.missilesTotal));
   setText("blueFire", formatNumber(blue.totals.firePower));
   setText("blueDefense", formatNumber(blue.totals.defensePower));
   setText("blueStaying", formatNumber(blue.totals.stayingPower));
@@ -132,6 +139,7 @@ function renderEditors() {
     card.innerHTML = `
       <div class="editor-toolbar">
         <h3>${force.label}</h3>
+        <span id="${key}MissilesTotalLabel" class="toolbar-total">Missiles total: ${formatNumber(force.totals?.missilesTotal || 0)}</span>
         <div class="toolbar-control">
           <label for="${key}-mode">Salvo size</label>
           <select id="${key}-mode" data-force="${key}" data-field="salvoMode">
@@ -170,8 +178,8 @@ function renderRow(forceKey, row, index) {
       <td><input class="unit-input" value="${escapeAttr(row.unit)}" data-field="unit" /></td>
       ${fields
         .map(([key, , type]) => {
-          if (key === "salvoSize") {
-            return `<td class="readonly" data-calc="salvoSize">${formatNumber(row.salvoSize)}</td>`;
+          if (key === "salvoSize" || key === "missilesTotal") {
+            return `<td class="readonly" data-calc="${key}">${formatNumber(row[key])}</td>`;
           }
           const step = key === "number" || key === "missileNumber" ? "1" : "0.1";
           return `<td><input type="${type}" step="${step}" value="${row[key] ?? 0}" data-field="${key}" /></td>`;
@@ -193,9 +201,12 @@ function escapeAttr(value) {
 }
 
 function updateCalculatedCells() {
+  setText("redMissilesTotalLabel", `Missiles total: ${formatNumber(state.data.forces.red.totals.missilesTotal)}`);
+  setText("blueMissilesTotalLabel", `Missiles total: ${formatNumber(state.data.forces.blue.totals.missilesTotal)}`);
   document.querySelectorAll("tr[data-force]").forEach((tr) => {
     const force = state.data.forces[tr.dataset.force];
     const row = force.rows[Number(tr.dataset.index)];
+    tr.querySelector('[data-calc="missilesTotal"]').textContent = formatNumber(row.missilesTotal);
     tr.querySelector('[data-calc="salvoSize"]').textContent = formatNumber(row.salvoSize);
     tr.querySelector('[data-calc="firePower"]').textContent = formatNumber(row.firePower);
     tr.querySelector('[data-calc="defensePower"]').textContent = formatNumber(row.defensePower);
@@ -379,6 +390,10 @@ function writeCell(sheet, address, value) {
   sheet[address] = isNumber ? { t: "n", v: numericValue } : { t: "s", v: String(value ?? "") };
 }
 
+function writeFormula(sheet, address, formula) {
+  sheet[address] = { t: "n", f: formula };
+}
+
 function writeForceToWorkbook(workbook, force) {
   const sheet = workbook.Sheets[force.sheet];
   if (!sheet) throw new Error(`Missing worksheet: ${force.sheet}`);
@@ -388,6 +403,7 @@ function writeForceToWorkbook(workbook, force) {
     writeCell(sheet, `C${r}`, row.unit || "");
     writeCell(sheet, `D${r}`, row.number || 0);
     writeCell(sheet, `E${r}`, row.missileNumber || 0);
+    writeFormula(sheet, `H${r}`, `D${r}*E${r}*F${r}*G${r}`);
     writeCell(sheet, `G${r}`, row.effectiveSalvo || 0);
     writeCell(sheet, `I${r}`, row.asmdCapability || 0);
     writeCell(sheet, `J${r}`, row.neutralizeHits || 0);

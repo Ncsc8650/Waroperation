@@ -62,10 +62,12 @@ def read_force_sheet(workbook: Any, config: ForceConfig) -> dict[str, Any]:
 
     for row_number in range(config.start_row, config.end_row + 1):
         count = as_number(ws[f"D{row_number}"].value)
+        missile_number = as_number(ws[f"E{row_number}"].value)
+        missiles_total = count * missile_number
         effective_salvo = as_number(ws[f"G{row_number}"].value)
         asmd = as_number(ws[f"I{row_number}"].value)
         neutralize = as_number(ws[f"J{row_number}"].value)
-        fire_power = count * salvo_factor * effective_salvo
+        fire_power = missiles_total * salvo_factor * effective_salvo
         defense_power = count * asmd
         staying_power = count * neutralize
 
@@ -76,7 +78,8 @@ def read_force_sheet(workbook: Any, config: ForceConfig) -> dict[str, Any]:
                 "displayNumber": ws[f"N{row_number}"].value,
                 "unit": ws[f"C{row_number}"].value or "",
                 "number": clean_number(count),
-                "missileNumber": clean_number(as_number(ws[f"E{row_number}"].value)),
+                "missileNumber": clean_number(missile_number),
+                "missilesTotal": clean_number(missiles_total),
                 "salvoSize": salvo_factor,
                 "effectiveSalvo": clean_number(effective_salvo),
                 "firePower": clean_number(fire_power),
@@ -106,6 +109,7 @@ def calculate_totals(rows: list[dict[str, Any]]) -> dict[str, int | float]:
             sum(as_number(row.get("number")) for row in rows if row.get("countInUnitTotal", True))
         ),
         "firePower": clean_number(sum(as_number(row.get("firePower")) for row in rows)),
+        "missilesTotal": clean_number(sum(as_number(row.get("missilesTotal")) for row in rows)),
         "defensePower": clean_number(sum(as_number(row.get("defensePower")) for row in rows)),
         "stayingPower": clean_number(sum(as_number(row.get("stayingPower")) for row in rows)),
     }
@@ -190,6 +194,7 @@ def write_force_sheet(workbook: Any, config: ForceConfig, force_payload: dict[st
         ws[f"C{row_number}"] = payload_row["unit"] or None
         ws[f"D{row_number}"] = payload_row["number"]
         ws[f"E{row_number}"] = payload_row["missileNumber"]
+        ws[f"H{row_number}"] = f"=D{row_number}*E{row_number}*F{row_number}*G{row_number}"
         ws[f"G{row_number}"] = payload_row["effectiveSalvo"]
         ws[f"I{row_number}"] = payload_row["asmdCapability"]
         ws[f"J{row_number}"] = payload_row["neutralizeHits"]
