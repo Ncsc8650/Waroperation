@@ -7,7 +7,7 @@ const state = {
   advantageMode: "auto",
 };
 
-const APP_VERSION = "v2026.06.24.2";
+const APP_VERSION = "v2026.06.24.3";
 
 const fields = [
   ["number", "Number", "number"],
@@ -47,7 +47,7 @@ function calculateForce(force) {
       ...row,
       missilesTotal,
       salvoSize: factor,
-      firePower: missilesTotal * factor * effectiveSalvo,
+      firePower: number * factor * effectiveSalvo,
       defensePower: number * asmd,
       stayingPower: number * neutralize,
     };
@@ -437,7 +437,7 @@ function writeForceToWorkbook(workbook, force) {
     writeCell(sheet, `C${r}`, row.unit || "");
     writeCell(sheet, `D${r}`, row.number || 0);
     writeCell(sheet, `E${r}`, row.missileNumber || 0);
-    writeFormula(sheet, `H${r}`, `D${r}*E${r}*F${r}*G${r}`);
+    writeFormula(sheet, `H${r}`, `D${r}*F${r}*G${r}`);
     writeCell(sheet, `G${r}`, row.effectiveSalvo || 0);
     writeCell(sheet, `I${r}`, row.asmdCapability || 0);
     writeCell(sheet, `J${r}`, row.neutralizeHits || 0);
