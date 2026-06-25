@@ -62,7 +62,7 @@ def read_force_sheet(workbook: Any, config: ForceConfig) -> dict[str, Any]:
 
     for row_number in range(config.start_row, config.end_row + 1):
         count = as_number(ws[f"D{row_number}"].value)
-        missile_number = as_number(ws[f"E{row_number}"].value)
+        missile_number = max(as_number(ws[f"E{row_number}"].value), 0)
         missiles_total = count * missile_number
         effective_salvo = as_number(ws[f"G{row_number}"].value)
         asmd = as_number(ws[f"I{row_number}"].value)
@@ -183,7 +183,7 @@ def coerce_payload_row(row: dict[str, Any], fallback_row: int) -> dict[str, Any]
         "row": int(row.get("row") or fallback_row),
         "unit": str(row.get("unit") or "").strip(),
         "number": as_number(row.get("number")),
-        "missileNumber": as_number(row.get("missileNumber")),
+        "missileNumber": max(as_number(row.get("missileNumber")), 0),
         "effectiveSalvo": as_number(row.get("effectiveSalvo")),
         "asmdCapability": as_number(row.get("asmdCapability")),
         "neutralizeHits": as_number(row.get("neutralizeHits")),

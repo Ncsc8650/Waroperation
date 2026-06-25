@@ -7,7 +7,7 @@ const state = {
   advantageMode: "auto",
 };
 
-const APP_VERSION = "v2026.06.25.2";
+const APP_VERSION = "v2026.06.25.3";
 
 const fields = [
   ["number", "Number", "number"],
@@ -47,12 +47,13 @@ const formatPercent = (value) =>
 const byId = (id) => document.getElementById(id);
 
 const getSalvoFactor = (mode) => ({ "": 0, blank: 0, minimum: 1, optimum: 2, maximum: 3 })[mode] || 0;
+const clampMissiles = (value) => Math.max(Number(value || 0), 0);
 
 function calculateForce(force) {
   const factor = getSalvoFactor(force.salvoMode);
   const rows = force.rows.map((row) => {
     const number = Number(row.number || 0);
-    const missileNumber = Number(row.missileNumber || 0);
+    const missileNumber = clampMissiles(row.missileNumber);
     const missilesTotal = number * missileNumber;
     const effectiveSalvo = Number(row.effectiveSalvo || 0);
     const asmd = Number(row.asmdCapability || 0);
@@ -339,7 +340,7 @@ function consumeMissilesForSalvo(force) {
   force.rows = force.rows.map((row) => ({
     ...row,
     salvoSize: factor,
-    missileNumber: Math.max(Number(row.missileNumber ?? 0) - factor, 0),
+    missileNumber: clampMissiles(Number(row.missileNumber ?? 0) - factor),
   }));
 }
 
@@ -745,9 +746,12 @@ document.addEventListener("input", (event) => {
     row[field] = target.value;
   } else {
     const value = Number(target.value || 0);
-    row[field] = value;
     if (field === "missileNumber") {
-      row.baseMissileNumber = value;
+      row[field] = clampMissiles(value);
+      row.baseMissileNumber = row[field];
+      target.value = row[field];
+    } else {
+      row[field] = value;
     }
   }
   state.dirty = true;
