@@ -75,7 +75,6 @@ def read_force_sheet(workbook: Any, config: ForceConfig) -> dict[str, Any]:
         sum_neutralize = count * neutralize
         sum_defense_power = count * defense_power
         sum_staying_power = count * staying_power
-
         rows.append(
             {
                 "row": row_number,

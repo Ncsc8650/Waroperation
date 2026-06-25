@@ -7,7 +7,7 @@ const state = {
   advantageMode: "auto",
 };
 
-const APP_VERSION = "v2026.06.24.4";
+const APP_VERSION = "v2026.06.25.2";
 
 const fields = [
   ["number", "Number", "number"],
@@ -60,6 +60,11 @@ function calculateForce(force) {
     const firePower = number * factor * effectiveSalvo;
     const defensePower = number * asmd;
     const stayingPower = number * neutralize;
+    const sumFirePower = number * firePower;
+    const sumAsmdCapability = number * asmd;
+    const sumNeutralizeHits = number * neutralize;
+    const sumDefensePower = number * defensePower;
+    const sumStayingPower = number * stayingPower;
     return {
       ...row,
       missilesTotal,
@@ -67,11 +72,11 @@ function calculateForce(force) {
       firePower,
       defensePower,
       stayingPower,
-      sumFirePower: number * firePower,
-      sumAsmdCapability: number * asmd,
-      sumNeutralizeHits: number * neutralize,
-      sumDefensePower: number * defensePower,
-      sumStayingPower: number * stayingPower,
+      sumFirePower,
+      sumAsmdCapability,
+      sumNeutralizeHits,
+      sumDefensePower,
+      sumStayingPower,
     };
   });
 
